@@ -170,8 +170,16 @@ export function useSwap() {
 
     setIsLoading(true);
     try {
+      console.log('Starting swap execution:', {
+        tokenInAddress,
+        tokenOutAddress,
+        amountIn,
+        userAddress
+      });
+
       // Check if approval is needed
       const hasAllowance = await checkAllowance(tokenInAddress, userAddress, amountIn);
+      console.log('Allowance check result:', hasAllowance);
       
       if (!hasAllowance) {
         toast({
@@ -187,7 +195,13 @@ export function useSwap() {
       const contract = new ethers.Contract(CONTRACTS.CRYPTO_SWAP, CRYPTO_SWAP_ABI, signer);
       const amountInWei = ethers.parseEther(amountIn);
       
+      console.log('Calling swapTokens on contract:', {
+        contractAddress: CONTRACTS.CRYPTO_SWAP,
+        amountInWei: amountInWei.toString()
+      });
+      
       const tx = await contract.swapTokens(tokenInAddress, tokenOutAddress, amountInWei);
+      console.log('Transaction submitted:', tx.hash);
       
       toast({
         title: "Swap Submitted",
@@ -195,14 +209,21 @@ export function useSwap() {
       });
 
       const receipt = await tx.wait();
+      console.log('Transaction confirmed:', receipt);
+      
+      // Verify the transaction details
+      await verifySwapTransaction(receipt.hash);
       
       toast({
         title: "Swap Successful!",
         description: `Successfully swapped tokens! Transaction: ${receipt.hash.slice(0, 10)}...`,
       });
 
-      // Reload balances
-      await loadBalances();
+      // Wait a moment before reloading balances to ensure blockchain state is updated
+      setTimeout(async () => {
+        console.log('Reloading balances after swap...');
+        await loadBalances();
+      }, 2000);
       
       return true;
     } catch (error: any) {
@@ -224,6 +245,38 @@ export function useSwap() {
       return false;
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  // Add this function to verify transaction details
+  const verifySwapTransaction = async (txHash: string): Promise<void> => {
+    if (!signer) return;
+    
+    try {
+      const provider = signer.provider;
+      const tx = await provider.getTransaction(txHash);
+      const receipt = await provider.getTransactionReceipt(txHash);
+      
+      console.log('Transaction details:', {
+        hash: txHash,
+        status: receipt?.status,
+        gasUsed: receipt?.gasUsed?.toString(),
+        logs: receipt?.logs,
+        blockNumber: receipt?.blockNumber
+      });
+      
+      // Check for Transfer events in the logs
+      if (receipt?.logs) {
+        receipt.logs.forEach((log, index) => {
+          console.log(`Log ${index}:`, {
+            address: log.address,
+            topics: log.topics,
+            data: log.data
+          });
+        });
+      }
+    } catch (error) {
+      console.error('Error verifying transaction:', error);
     }
   };
 
@@ -262,6 +315,7 @@ export function useSwap() {
     checkAllowance,
     approveToken,
     executeSwap,
+    verifySwapTransaction,
     canSwap,
   };
 }

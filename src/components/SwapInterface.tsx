@@ -12,7 +12,7 @@ import InsufficientBalanceAlert from './InsufficientBalanceAlert';
 
 const SwapInterface: React.FC = () => {
   const { account, isConnected, isCorrectNetwork } = useWeb3();
-  const { getTokenBalance, formatBalance } = useTokens();
+  const { getTokenBalance, formatBalance, loadBalances } = useTokens();
   const { getSwapQuote, checkAllowance, approveToken, executeSwap, isLoading, isApproving } = useSwap();
   const { toast } = useToast();
 
@@ -120,9 +120,16 @@ const SwapInterface: React.FC = () => {
     const success = await executeSwap(fromToken.address, toToken.address, fromAmount, account);
     
     if (success) {
+      // Clear form
       setFromAmount('');
       setQuote(null);
       setNeedsApproval(false);
+      
+      // Force balance refresh
+      setTimeout(async () => {
+        console.log('Force refreshing balances after successful swap...');
+        await loadBalances();
+      }, 3000);
     }
   };
 
