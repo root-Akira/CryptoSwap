@@ -30,23 +30,51 @@ const WalletConnection: React.FC<WalletConnectionProps> = ({
     }
 
     try {
+      // Request account access
       const accounts = await window.ethereum.request({
         method: 'eth_requestAccounts'
       });
       
-      if (accounts.length > 0) {
+      if (accounts && accounts.length > 0) {
         setIsConnected(true);
         setAccount(accounts[0]);
         toast({
           title: "Wallet Connected",
-          description: "Successfully connected to MetaMask!",
+          description: `Successfully connected to ${accounts[0].slice(0, 6)}...${accounts[0].slice(-4)}`,
+        });
+        
+        // Listen for account changes
+        window.ethereum.on('accountsChanged', (accounts: string[]) => {
+          if (accounts.length === 0) {
+            setIsConnected(false);
+            setAccount('');
+            toast({
+              title: "Wallet Disconnected",
+              description: "MetaMask account was disconnected",
+              variant: "destructive"
+            });
+          } else {
+            setAccount(accounts[0]);
+            toast({
+              title: "Account Changed",
+              description: `Switched to ${accounts[0].slice(0, 6)}...${accounts[0].slice(-4)}`,
+            });
+          }
         });
       }
     } catch (error: any) {
       console.error('Error connecting wallet:', error);
+      let errorMessage = "Failed to connect wallet";
+      
+      if (error.code === 4001) {
+        errorMessage = "User rejected the connection request";
+      } else if (error.code === -32002) {
+        errorMessage = "Connection request already pending";
+      }
+      
       toast({
         title: "Connection Failed",
-        description: error.message || "Failed to connect wallet",
+        description: errorMessage,
         variant: "destructive"
       });
     }

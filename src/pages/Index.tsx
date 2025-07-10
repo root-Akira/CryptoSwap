@@ -16,19 +16,51 @@ const Index = () => {
 
   useEffect(() => {
     checkWalletConnection();
+    
+    // Listen for account changes if ethereum is available
+    if (typeof window.ethereum !== 'undefined') {
+      const handleAccountsChanged = (accounts: string[]) => {
+        if (accounts.length === 0) {
+          setIsConnected(false);
+          setAccount('');
+        } else {
+          setIsConnected(true);
+          setAccount(accounts[0]);
+        }
+      };
+
+      window.ethereum.on('accountsChanged', handleAccountsChanged);
+      
+      // Cleanup listener on component unmount
+      return () => {
+        if (window.ethereum && window.ethereum.removeListener) {
+          window.ethereum.removeListener('accountsChanged', handleAccountsChanged);
+        }
+      };
+    }
   }, []);
 
   const checkWalletConnection = async () => {
     if (typeof window.ethereum !== 'undefined') {
       try {
         const accounts = await window.ethereum.request({ method: 'eth_accounts' });
-        if (accounts.length > 0) {
+        if (accounts && accounts.length > 0) {
           setIsConnected(true);
           setAccount(accounts[0]);
+          console.log('Wallet already connected:', accounts[0]);
+        } else {
+          console.log('No accounts found - wallet not connected');
         }
       } catch (error) {
         console.error('Error checking wallet connection:', error);
+        toast({
+          title: "Error",
+          description: "Failed to check wallet connection",
+          variant: "destructive"
+        });
       }
+    } else {
+      console.log('MetaMask not detected');
     }
   };
 
