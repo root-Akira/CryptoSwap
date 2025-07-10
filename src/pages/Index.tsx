@@ -1,68 +1,13 @@
 
-import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { ArrowUpDown, Wallet, ChevronDown } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
+import React from 'react';
 import WalletConnection from '@/components/WalletConnection';
-import TokenSelector from '@/components/TokenSelector';
 import SwapInterface from '@/components/SwapInterface';
+import TokenFaucet from '@/components/TokenFaucet';
+import TokenBalanceDisplay from '@/components/TokenBalanceDisplay';
+import { useWeb3 } from '@/hooks/useWeb3';
 
 const Index = () => {
-  const [isConnected, setIsConnected] = useState(false);
-  const [account, setAccount] = useState('');
-  const { toast } = useToast();
-
-  useEffect(() => {
-    checkWalletConnection();
-    
-    // Listen for account changes if ethereum is available
-    if (typeof window.ethereum !== 'undefined') {
-      const handleAccountsChanged = (accounts: string[]) => {
-        if (accounts.length === 0) {
-          setIsConnected(false);
-          setAccount('');
-        } else {
-          setIsConnected(true);
-          setAccount(accounts[0]);
-        }
-      };
-
-      window.ethereum.on('accountsChanged', handleAccountsChanged);
-      
-      // Cleanup listener on component unmount
-      return () => {
-        if (window.ethereum && window.ethereum.removeListener) {
-          window.ethereum.removeListener('accountsChanged', handleAccountsChanged);
-        }
-      };
-    }
-  }, []);
-
-  const checkWalletConnection = async () => {
-    if (typeof window.ethereum !== 'undefined') {
-      try {
-        const accounts = await window.ethereum.request({ method: 'eth_accounts' });
-        if (accounts && accounts.length > 0) {
-          setIsConnected(true);
-          setAccount(accounts[0]);
-          console.log('Wallet already connected:', accounts[0]);
-        } else {
-          console.log('No accounts found - wallet not connected');
-        }
-      } catch (error) {
-        console.error('Error checking wallet connection:', error);
-        toast({
-          title: "Error",
-          description: "Failed to check wallet connection",
-          variant: "destructive"
-        });
-      }
-    } else {
-      console.log('MetaMask not detected');
-    }
-  };
+  const { isConnected, isCorrectNetwork } = useWeb3();
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50">
@@ -75,24 +20,88 @@ const Index = () => {
             </div>
             <h1 className="text-xl font-bold text-gray-900">CryptoSwap</h1>
           </div>
-          <WalletConnection 
-            isConnected={isConnected}
-            account={account}
-            setIsConnected={setIsConnected}
-            setAccount={setAccount}
-          />
+          
+          {/* Token Balance Display in Navbar */}
+          <div className="flex items-center space-x-4">
+            <TokenBalanceDisplay />
+            <WalletConnection />
+          </div>
         </div>
       </header>
 
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8">
-        <div className="max-w-md mx-auto">
+        <div className="max-w-4xl mx-auto">
           <div className="text-center mb-8">
-            <h2 className="text-3xl font-bold text-gray-900 mb-2">Swap Tokens</h2>
-            <p className="text-gray-600">Trade tokens in an instant</p>
+            <h2 className="text-3xl font-bold text-gray-900 mb-2">Decentralized Token Swap</h2>
+            <p className="text-gray-600">Trade tokens instantly on Sepolia testnet</p>
           </div>
 
-          <SwapInterface isConnected={isConnected} />
+          <div className={`${(!isConnected || !isCorrectNetwork) ? 'grid grid-cols-1 lg:grid-cols-2 gap-8' : 'flex justify-center'}`}>
+            {/* Swap Interface */}
+            <div className={`${(!isConnected || !isCorrectNetwork) ? '' : 'w-full max-w-md'}`}>
+              <SwapInterface />
+            </div>
+
+            {/* Getting Started Guide */}
+            {(!isConnected || !isCorrectNetwork) && (
+              <div className="space-y-6">
+                <div className="p-6 bg-white rounded-lg shadow-lg">
+                  <h3 className="text-lg font-semibold mb-4">🚀 Getting Started</h3>
+                  <div className="space-y-3">
+                    <div className="flex items-start space-x-3">
+                      <div className="bg-blue-100 text-blue-600 rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold">1</div>
+                      <div>
+                        <h4 className="font-medium">Connect Your Wallet</h4>
+                        <p className="text-sm text-gray-600">Connect MetaMask to Sepolia testnet</p>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-start space-x-3">
+                      <div className="bg-blue-100 text-blue-600 rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold">2</div>
+                      <div>
+                        <h4 className="font-medium">Get Free Test Tokens</h4>
+                        <p className="text-sm text-gray-600">Claim free mUSDC, mUSDT, and mDAI tokens</p>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-start space-x-3">
+                      <div className="bg-blue-100 text-blue-600 rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold">3</div>
+                      <div>
+                        <h4 className="font-medium">Start Swapping</h4>
+                        <p className="text-sm text-gray-600">Exchange tokens with low fees (0.3%)</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Platform Stats */}
+          {isConnected && isCorrectNetwork && (
+            <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="bg-white p-6 rounded-lg shadow-lg text-center">
+                <div className="text-2xl font-bold text-blue-600">3</div>
+                <div className="text-sm text-gray-600">Supported Tokens</div>
+              </div>
+              <div className="bg-white p-6 rounded-lg shadow-lg text-center">
+                <div className="text-2xl font-bold text-green-600">0.3%</div>
+                <div className="text-sm text-gray-600">Trading Fee</div>
+              </div>
+              <div className="bg-white p-6 rounded-lg shadow-lg text-center">
+                <div className="text-2xl font-bold text-purple-600">∞</div>
+                <div className="text-sm text-gray-600">Free Test Tokens</div>
+              </div>
+            </div>
+          )}
+
+          {/* Token Faucet Section - Moved to Bottom */}
+          {isConnected && isCorrectNetwork && (
+            <div className="mt-12 flex justify-center">
+              <TokenFaucet />
+            </div>
+          )}
         </div>
       </main>
     </div>

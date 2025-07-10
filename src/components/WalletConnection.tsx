@@ -2,96 +2,31 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Wallet } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
+import { useWeb3 } from '@/hooks/useWeb3';
 
-interface WalletConnectionProps {
-  isConnected: boolean;
-  account: string;
-  setIsConnected: (connected: boolean) => void;
-  setAccount: (account: string) => void;
-}
-
-const WalletConnection: React.FC<WalletConnectionProps> = ({
-  isConnected,
-  account,
-  setIsConnected,
-  setAccount
-}) => {
-  const { toast } = useToast();
-
-  const connectWallet = async () => {
-    if (typeof window.ethereum === 'undefined') {
-      toast({
-        title: "MetaMask Required",
-        description: "Please install MetaMask to use this application.",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    try {
-      // Request account access
-      const accounts = await window.ethereum.request({
-        method: 'eth_requestAccounts'
-      });
-      
-      if (accounts && accounts.length > 0) {
-        setIsConnected(true);
-        setAccount(accounts[0]);
-        toast({
-          title: "Wallet Connected",
-          description: `Successfully connected to ${accounts[0].slice(0, 6)}...${accounts[0].slice(-4)}`,
-        });
-        
-        // Listen for account changes
-        window.ethereum.on('accountsChanged', (accounts: string[]) => {
-          if (accounts.length === 0) {
-            setIsConnected(false);
-            setAccount('');
-            toast({
-              title: "Wallet Disconnected",
-              description: "MetaMask account was disconnected",
-              variant: "destructive"
-            });
-          } else {
-            setAccount(accounts[0]);
-            toast({
-              title: "Account Changed",
-              description: `Switched to ${accounts[0].slice(0, 6)}...${accounts[0].slice(-4)}`,
-            });
-          }
-        });
-      }
-    } catch (error: any) {
-      console.error('Error connecting wallet:', error);
-      let errorMessage = "Failed to connect wallet";
-      
-      if (error.code === 4001) {
-        errorMessage = "User rejected the connection request";
-      } else if (error.code === -32002) {
-        errorMessage = "Connection request already pending";
-      }
-      
-      toast({
-        title: "Connection Failed",
-        description: errorMessage,
-        variant: "destructive"
-      });
-    }
-  };
-
-  const disconnectWallet = () => {
-    setIsConnected(false);
-    setAccount('');
-    toast({
-      title: "Wallet Disconnected",
-      description: "Successfully disconnected from MetaMask",
-    });
-  };
+const WalletConnection: React.FC = () => {
+  const { account, isConnected, isCorrectNetwork, isLoading, connect, disconnect, switchToSepolia } = useWeb3();
 
   const formatAddress = (address: string) => {
     return `${address.slice(0, 6)}...${address.slice(-4)}`;
   };
+
+  if (isConnected && !isCorrectNetwork) {
+    return (
+      <div className="flex items-center space-x-2">
+        <div className="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm font-medium">
+          Wrong Network
+        </div>
+        <Button 
+          variant="outline" 
+          size="sm"
+          onClick={switchToSepolia}
+        >
+          Switch to Sepolia
+        </Button>
+      </div>
+    );
+  }
 
   if (isConnected) {
     return (
@@ -102,7 +37,7 @@ const WalletConnection: React.FC<WalletConnectionProps> = ({
         <Button 
           variant="outline" 
           size="sm"
-          onClick={disconnectWallet}
+          onClick={disconnect}
         >
           Disconnect
         </Button>
@@ -111,9 +46,13 @@ const WalletConnection: React.FC<WalletConnectionProps> = ({
   }
 
   return (
-    <Button onClick={connectWallet} className="bg-blue-600 hover:bg-blue-700">
+    <Button 
+      onClick={connect} 
+      disabled={isLoading}
+      className="bg-blue-600 hover:bg-blue-700"
+    >
       <Wallet className="w-4 h-4 mr-2" />
-      Connect MetaMask
+      {isLoading ? 'Connecting...' : 'Connect MetaMask'}
     </Button>
   );
 };
