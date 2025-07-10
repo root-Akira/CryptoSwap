@@ -26,7 +26,10 @@ const SwapInterface: React.FC = () => {
   useEffect(() => {
     const getQuote = async () => {
       if (fromToken && toToken && fromAmount && parseFloat(fromAmount) > 0) {
+        console.log('Requesting quote for:', { fromToken: fromToken.symbol, toToken: toToken.symbol, fromAmount });
+        
         const newQuote = await getSwapQuote(fromToken.address, toToken.address, fromAmount);
+        console.log('Quote received:', newQuote);
         setQuote(newQuote);
         
         // Check if approval is needed
@@ -35,6 +38,12 @@ const SwapInterface: React.FC = () => {
           setNeedsApproval(!hasAllowance);
         }
       } else {
+        console.log('Clearing quote - missing inputs:', { 
+          hasFromToken: !!fromToken, 
+          hasToToken: !!toToken, 
+          hasAmount: !!fromAmount,
+          amountValue: fromAmount 
+        });
         setQuote(null);
         setNeedsApproval(false);
       }
@@ -42,7 +51,7 @@ const SwapInterface: React.FC = () => {
 
     const debounce = setTimeout(getQuote, 500);
     return () => clearTimeout(debounce);
-  }, [fromToken, toToken, fromAmount, account]);
+  }, [fromToken, toToken, fromAmount, account, getSwapQuote, checkAllowance]);
 
   const handleSwapTokens = () => {
     const tempToken = fromToken;
@@ -124,7 +133,6 @@ const SwapInterface: React.FC = () => {
   };
 
   const canSwapTokens = fromToken && toToken && fromAmount && parseFloat(fromAmount) > 0 && isConnected && isCorrectNetwork;
-  const swapButtonText = needsApproval ? 'Approve Required' : isLoading ? 'Swapping...' : 'Swap';
 
   // Check if user has insufficient balance
   const hasInsufficientBalance = fromToken && fromAmount && 
@@ -197,7 +205,7 @@ const SwapInterface: React.FC = () => {
             <div className="relative">
               <Input
                 type="text"
-                placeholder="0.0"
+                placeholder={fromToken && toToken && fromAmount && parseFloat(fromAmount) > 0 && !quote ? "Calculating..." : "0.0"}
                 value={quote ? formatBalance(quote.amountOut, 6) : ''}
                 readOnly
                 className="text-2xl font-semibold h-16 pr-20 text-right bg-gray-50 border-2"
@@ -228,27 +236,22 @@ const SwapInterface: React.FC = () => {
 
           {/* Action Buttons */}
           <div className="space-y-2">
-            {needsApproval && canSwapTokens && !hasInsufficientBalance && (
-              <Button
-                onClick={handleApprove}
-                disabled={isApproving}
-                className="w-full h-14 text-lg font-semibold bg-yellow-600 hover:bg-yellow-700"
-              >
-                {isApproving ? 'Approving...' : `Approve ${fromToken?.symbol}`}
-              </Button>
-            )}
-            
             <Button
               onClick={needsApproval ? handleApprove : handleSwap}
-              disabled={!canSwapTokens || isLoading || (needsApproval && isApproving) || hasInsufficientBalance}
-              className="w-full h-14 text-lg font-semibold bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 disabled:opacity-50"
+              disabled={!canSwapTokens || isLoading || isApproving || hasInsufficientBalance}
+              className={`w-full h-14 text-lg font-semibold ${
+                needsApproval && canSwapTokens && !hasInsufficientBalance
+                  ? 'bg-yellow-600 hover:bg-yellow-700'
+                  : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700'
+              } disabled:opacity-50`}
             >
               {!isConnected ? 'Connect Wallet' : 
                !isCorrectNetwork ? 'Switch to Sepolia' :
                !fromToken || !toToken ? 'Select Tokens' :
                !fromAmount ? 'Enter Amount' :
                hasInsufficientBalance ? 'Insufficient Balance' :
-               swapButtonText}
+               needsApproval ? (isApproving ? 'Approving...' : `Approve ${fromToken?.symbol}`) :
+               isLoading ? 'Swapping...' : 'Swap'}
             </Button>
           </div>
 
