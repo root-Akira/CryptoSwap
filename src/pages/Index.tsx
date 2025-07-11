@@ -4,7 +4,7 @@ import WalletConnection from '@/components/WalletConnection';
 import SwapInterface from '@/components/SwapInterface';
 import TokenFaucet from '@/components/TokenFaucet';
 import TokenBalanceDisplay from '@/components/TokenBalanceDisplay';
-import ContractDebugPanel from '@/components/ContractDebugPanel';
+import AdminButton from '@/components/AdminButton';
 import { useWeb3 } from '@/hooks/useWeb3';
 
 const Index = () => {
@@ -25,6 +25,7 @@ const Index = () => {
           {/* Token Balance Display in Navbar */}
           <div className="flex items-center space-x-4">
             <TokenBalanceDisplay />
+            <AdminButton />
             <WalletConnection />
           </div>
         </div>
@@ -102,11 +103,6 @@ const Index = () => {
             <div className="mt-12 flex justify-center">
               <TokenFaucet />
             </div>
-          )}
-
-          {/* Debug Panel - For testing contract issues */}
-          {isConnected && isCorrectNetwork && (
-            <ContractDebugPanel />
           )}
         </div>
       </main>
